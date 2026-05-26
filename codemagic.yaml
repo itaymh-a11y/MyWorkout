@@ -1,45 +1,41 @@
-# Codemagic_Key = שם המפתח ב-Codemagic > Integrations > Developer Portal
-# ודא ש-com.itay.myworkout רשום ב-Apple Developer (Identifiers)
-workflows:
-  ios-release:
-    name: iOS Release Build
-    max_build_duration: 90
-    instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: Codemagic_Key
-    environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: 'master'
-          include: true
-    scripts:
-      - name: Set up code signing
-        script: |
-          keychain initialize
-          app-store-connect fetch-signing-files "com.itay.myworkout" --type IOS_APP_STORE --create --generate-missing-certificate
-          keychain add-certificates
-          xcode-project disable-automatic-signing --project=ios/Runner.xcodeproj --team-id=B89UP95P4N
-          xcode-project use-profiles \
-            --project=ios/Runner.xcworkspace \
-            --export-options-plist=/Users/builder/export_options.plist \
-            --code-signing-setup-verbose-logging
-      - name: Get Flutter packages
-        script: |
-          flutter pub get
-      - name: Install CocoaPods dependencies
-        script: |
-          cd "$CM_BUILD_DIR/ios" && pod install
-      - name: Flutter build iOS IPA
-        script: |
-          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
-    artifacts:
-      - build/ios/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
+# Codemagic_Key = שם המפתח ב-Codemagic > Integrations > Developer Portal
+# ודא ש-com.itay.myworkout רשום ב-Apple Developer (Identifiers)
+workflows:
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 90
+    instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: Codemagic_Key
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'master'
+          include: true
+    scripts:
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "com.itay.myworkout" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles --project=ios/Runner.xcworkspace --export-options-plist=/Users/builder/export_options.plist --code-signing-setup-verbose-logging
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd "$CM_BUILD_DIR/ios" && pod install
+      - name: Flutter build iOS IPA
+        script: |
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
