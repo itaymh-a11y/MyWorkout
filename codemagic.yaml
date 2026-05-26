@@ -23,7 +23,8 @@ workflows:
           keychain initialize
           app-store-connect fetch-signing-files "com.itay.myworkout" --type IOS_APP_STORE --create --generate-missing-certificate
           keychain add-certificates
-          xcode-project use-profiles
+          xcode-project disable-automatic-signing --project=ios/Runner.xcodeproj
+          xcode-project use-profiles --project=ios/Runner.xcodeproj
       - name: Get Flutter packages
         script: |
           flutter pub get
