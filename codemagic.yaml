@@ -17,6 +17,7 @@ workflows:
       - name: Flutter build iOS IPA
         script: |
           flutter pub get
-          flutter build ipa --release --export-method=app-store
+          # שימוש בפרמטר שמכריח את Xcode להשתמש בפרופיל ה-App Store הקיים בחשבון
+          flutter build ipa --release --export-method=app-store --code-sign-query="bundleId=com.itay.myworkout"
     artifacts:
       - build/ios/ipa/*.ipa
