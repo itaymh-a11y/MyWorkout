@@ -29,7 +29,7 @@ workflows:
           flutter pub get
       - name: Install CocoaPods dependencies
         script: |
-          cd ios && pod install
+          cd "$CM_BUILD_DIR/ios" && pod install
       - name: Flutter build iOS IPA
         script: |
           flutter build ipa --release \
