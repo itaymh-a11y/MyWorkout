@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // תרגילים מובנים — קריאה למשתמשים מחוברים בלבד, ללא כתיבה.
+    match /builtin_exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // נתוני משתמש: תרגילים, תוכניות, sessions וכו' תחת users/{uid}/...
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // כל נתיב אחר — חסום.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

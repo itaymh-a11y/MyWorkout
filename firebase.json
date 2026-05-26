@@ -1,0 +1,27 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "myworkout-f6236",
+          "appId": "1:880133437316:android:76efc32eda10b4c4250fd1",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "myworkout-f6236",
+          "configurations": {
+            "android": "1:880133437316:android:76efc32eda10b4c4250fd1",
+            "ios": "1:880133437316:ios:36f7a9316860173b250fd1",
+            "web": "1:880133437316:web:009270fcc13f1628250fd1"
+          }
+        }
+      }
+    }
+  }
+}

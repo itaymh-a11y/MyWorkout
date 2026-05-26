@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "880133437316",
+    "project_id": "myworkout-f6236",
+    "storage_bucket": "myworkout-f6236.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:880133437316:android:76efc32eda10b4c4250fd1",
+        "android_client_info": {
+          "package_name": "com.myworkout.myworkout"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8LwsO8s1RwrjgG7ot__qxZVg4AYLlNaU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
