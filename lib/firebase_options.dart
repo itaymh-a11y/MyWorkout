@@ -59,7 +59,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '880133437316',
     projectId: 'myworkout-f6236',
     storageBucket: 'myworkout-f6236.firebasestorage.app',
-    iosBundleId: 'com.myworkout.myworkout',
+    iosBundleId: 'com.itay.myworkout',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -68,7 +68,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: 'REPLACE_ME',
     projectId: 'REPLACE_ME',
     storageBucket: 'REPLACE_ME.appspot.com',
-    iosBundleId: 'com.myworkout.myworkout',
+    iosBundleId: 'com.itay.myworkout',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
