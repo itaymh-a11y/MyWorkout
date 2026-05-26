@@ -26,11 +26,15 @@ workflows:
           xcode-project use-profiles --export-options-plist=/Users/builder/export_options.plist
       - name: Flutter build iOS IPA
         script: |
-          cd ios && pod install && cd ..
-          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --no-codesign
+          # הכנת פרויקט הפלאטר והתלויות (בלי לקמפל ארכיון פגום)
+          flutter pub get
+          flutter build ios --release --no-codesign
 
-          # כעת נבצע את ה-export והחתימה האמיתיים באמצעות ה-plist שקודמג'יק יצר
-          xcode-project build-ipa --workspace=ios/Runner.xcworkspace --scheme=Runner --export-options-plist=/Users/builder/export_options.plist
+          # קימפול וחתימה רשמית דרך קודמג'יק באמצעות ה-plist שהורדנו
+          xcode-project build-ipa \
+            --workspace=ios/Runner.xcworkspace \
+            --scheme=Runner \
+            --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
