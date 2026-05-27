@@ -1,0 +1,69 @@
+# MyWorkout — iOS TestFlight (Flutter)
+# החלף את שם מפתח ה-API בשם המדויק מ-Codemagic:
+# Team settings → Integrations → Developer Portal → Manage keys
+workflows:
+  ios-testflight:
+    name: MyWorkout iOS → TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: Codemagic_Key
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.itay.myworkout
+      vars:
+        BUNDLE_ID: com.itay.myworkout
+        APPLE_TEAM_ID: B89UP95P4N
+        # אופציונלי: מזהה האפליקציה ב-App Store Connect (מספרים בלבד)
+        # APP_STORE_APPLE_ID: 1234567890
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    # אל תשחזר מ-cache תיקיית Pods שנוצרה ב-Windows
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+
+    scripts:
+      - name: Set up code signing on Xcode project
+        script: xcode-project use-profiles
+
+      - name: Strip Windows iOS dependency artifacts
+        script: |
+          set -e
+          echo "Removing Podfile.lock, Pods/, and Flutter plugin lockfiles..."
+          rm -f ios/Podfile.lock
+          rm -rf ios/Pods
+          rm -f .flutter-plugins-dependencies
+          rm -f .flutter-plugins
+
+      - name: Install Flutter dependencies (macOS)
+        script: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: |
+          set -e
+          cd ios
+          pod install --repo-update
+
+      - name: Build signed IPA (Release)
+        script: |
+          set -e
+          flutter build ipa --release \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
