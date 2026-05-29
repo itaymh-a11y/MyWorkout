@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:myworkout/core/providers/repository_providers.dart';
+import 'package:myworkout/features/workout/application/rest_alarm_player.dart';
 import 'package:myworkout/features/workout/data/session_repository.dart';
 import 'package:myworkout/features/workout/data/workout_draft_repository.dart';
 import 'package:myworkout/features/workout/domain/live_set_entry.dart';
@@ -17,8 +18,15 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
 
   final Ref _ref;
   final _draftRepo = WorkoutDraftRepository();
+  final _restAlarmPlayer = RestAlarmPlayer();
   bool _restAlarmPlayed = false;
   bool _draftLoaded = false;
+
+  @override
+  void dispose() {
+    _restAlarmPlayer.dispose();
+    super.dispose();
+  }
 
   WorkoutDraftRepository get draftRepository => _draftRepo;
 
@@ -66,7 +74,7 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
 
     final prevMap = <String, WorkoutSet>{};
     if (previous != null) {
-      for (final s in previous.sets) {
+      for (final s in previous.sets.where((set) => set.completed)) {
         prevMap['${s.exerciseId}_${s.setIndex}'] = s;
       }
     }
@@ -156,7 +164,7 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
     }
 
     if (current.restEndsAt != null &&
-        DateTime.now().isAfter(current.restEndsAt!)) {
+        !DateTime.now().isBefore(current.restEndsAt!)) {
       _onRestFinished();
       state = current.copyWith(clearRest: true);
       _persistDraft();
@@ -169,18 +177,23 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
   void _onRestFinished() {
     if (_restAlarmPlayed) return;
     _restAlarmPlayed = true;
+    final enabled = state?.restAlarmEnabled ?? true;
+    if (!enabled) return;
+
     if (!kIsWeb) {
       HapticFeedback.heavyImpact();
     }
-    SystemSound.play(SystemSoundType.alert);
+    _restAlarmPlayer.play();
   }
 
-  bool consumeRestFinishedSignal() {
-    if (_restAlarmPlayed) {
-      _restAlarmPlayed = false;
-      return true;
+  void toggleRestAlarm() {
+    if (state == null) return;
+    final next = !state!.restAlarmEnabled;
+    if (!next) {
+      _restAlarmPlayer.stop();
     }
-    return false;
+    state = state!.copyWith(restAlarmEnabled: next);
+    _persistDraft();
   }
 
   Future<void> updateSet(int index, LiveSetEntry updated) async {
@@ -247,6 +260,8 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
 
   void skipRest() {
     if (state == null) return;
+    _restAlarmPlayer.stop();
+    _restAlarmPlayed = true;
     state = state!.copyWith(clearRest: true);
     _persistDraft();
   }
@@ -279,6 +294,7 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
     );
 
     final firestoreSets = current.sets.map((e) {
+      final didComplete = e.completed;
       return WorkoutSet(
         id: '',
         exerciseId: e.exerciseId,
@@ -288,10 +304,11 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
         targetWeightKg: e.targetWeightKg,
         targetReps: e.targetReps,
         targetTimeSec: e.targetTimeSec,
-        actualWeightKg: e.actualWeightKg,
-        actualReps: e.actualReps,
-        actualTimeSec: e.actualTimeSec,
-        completed: e.completed,
+        // סט שלא סומן כבוצע נשמר כ"לא בוצע" ללא ביצוע בפועל.
+        actualWeightKg: didComplete ? e.actualWeightKg : null,
+        actualReps: didComplete ? e.actualReps : null,
+        actualTimeSec: didComplete ? e.actualTimeSec : null,
+        completed: didComplete,
       );
     }).toList();
 
@@ -301,12 +318,14 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
           firestoreSets,
         );
 
+    await _restAlarmPlayer.stop();
     await _draftRepo.clearDraft();
     state = null;
     return sessionId;
   }
 
   Future<void> cancelWorkout() async {
+    await _restAlarmPlayer.stop();
     await _draftRepo.clearDraft();
     state = null;
   }
@@ -318,39 +337,34 @@ class SessionController extends StateNotifier<LiveWorkoutState?> {
   }
 }
 
-/// לוגיקת תצוגת סוגריים לביצוע קודם.
-String? previousHintForSet(LiveSetEntry entry) {
+/// תצוגת ביצוע מהאימון האחרון (עמודה ייעודית במסך אימון פעיל).
+String previousPerformanceForSet(LiveSetEntry entry) {
   switch (entry.exerciseType) {
     case ExerciseType.weightReps:
       if (entry.previousWeightKg == null && entry.previousReps == null) {
-        return null;
+        return '—';
       }
-      final hasTarget = entry.targetWeightKg != null || entry.targetReps != null;
-      final sameWeight = entry.previousWeightKg == entry.targetWeightKg;
-      final sameReps = entry.previousReps == entry.targetReps;
-      if (!hasTarget) {
-        return '(${entry.previousWeightKg ?? '-'} ק"ג × ${entry.previousReps ?? '-'})';
-      }
-      if (sameWeight && sameReps) return null;
-      return '(${entry.previousWeightKg ?? '-'} ק"ג × ${entry.previousReps ?? '-'})';
+      return '${_fmtWeight(entry.previousWeightKg)} ק"ג × ${_fmtInt(entry.previousReps)}';
     case ExerciseType.repsOnly:
-      if (entry.previousReps == null) return null;
-      if (entry.targetReps == null) return '(${entry.previousReps} חזרות)';
-      if (entry.previousReps == entry.targetReps) return null;
-      return '(${entry.previousReps} חזרות)';
+      if (entry.previousReps == null) return '—';
+      return '${entry.previousReps} חזרות';
     case ExerciseType.time:
-      if (entry.previousTimeSec == null) return null;
-      if (entry.targetTimeSec == null) {
-        return '(${_fmtTime(entry.previousTimeSec!)})';
-      }
-      if (entry.previousTimeSec == entry.targetTimeSec) return null;
-      return '(${_fmtTime(entry.previousTimeSec!)})';
+      if (entry.previousTimeSec == null) return '—';
+      return _fmtTime(entry.previousTimeSec!);
   }
 }
+
+String _fmtWeight(double? kg) {
+  if (kg == null) return '-';
+  if (kg == kg.roundToDouble()) return kg.toInt().toString();
+  return kg.toString();
+}
+
+String _fmtInt(int? n) => n?.toString() ?? '-';
 
 String _fmtTime(int sec) {
   final m = sec ~/ 60;
   final s = sec % 60;
   if (m > 0) return '$m:${s.toString().padLeft(2, '0')}';
-  return '${s}ש׳';
+  return '$sש׳';
 }

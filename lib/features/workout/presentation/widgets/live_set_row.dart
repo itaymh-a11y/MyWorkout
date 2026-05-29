@@ -11,11 +11,13 @@ class LiveSetRow extends StatefulWidget {
     required this.entry,
     required this.onChanged,
     required this.onToggleComplete,
+    this.showColumnHeaders = false,
   });
 
   final LiveSetEntry entry;
   final void Function(LiveSetEntry updated) onChanged;
   final VoidCallback onToggleComplete;
+  final bool showColumnHeaders;
 
   @override
   State<LiveSetRow> createState() => _LiveSetRowState();
@@ -92,136 +94,210 @@ class _LiveSetRowState extends State<LiveSetRow> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hint = previousHintForSet(widget.entry);
+    final previousText = previousPerformanceForSet(widget.entry);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      color: widget.entry.completed ? AppColors.emberMuted : AppColors.cardSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: widget.entry.completed
-              ? AppColors.ember.withValues(alpha: 0.4)
-              : AppColors.silverLight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(
-              value: widget.entry.completed,
-              onChanged: (_) => widget.onToggleComplete(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.showColumnHeaders) _ColumnHeaders(type: widget.entry.exerciseType),
+        Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          color: widget.entry.completed ? AppColors.emberMuted : AppColors.cardSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: widget.entry.completed
+                  ? AppColors.ember.withValues(alpha: 0.4)
+                  : AppColors.silverLight,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: SizedBox(
-                width: 28,
-                child: Text(
-                  '${widget.entry.setIndex}',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-            ),
-            Expanded(child: _buildFields(context, hint)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFields(BuildContext context, String? hint) {
-    switch (widget.entry.exerciseType) {
-      case ExerciseType.weightReps:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _ValueField(
-                    controller: _weightCtrl,
-                    label: 'ק"ג (יעד ${widget.entry.targetWeightKg ?? '-'})',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                Checkbox(
+                  value: widget.entry.completed,
+                  onChanged: (_) => widget.onToggleComplete(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    width: 28,
+                    child: Text(
+                      '${widget.entry.setIndex}',
+                      style: theme.textTheme.titleMedium,
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-                    ],
-                    onChanged: _emitWeight,
                   ),
                 ),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: _ValueField(
-                    controller: _repsCtrl,
-                    label: 'חזרות (יעד ${widget.entry.targetReps ?? '-'})',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    onChanged: _emitReps,
+                  child: _buildFields(
+                    context,
+                    previousText: previousText,
                   ),
                 ),
               ],
             ),
-            if (hint != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                hint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFields(
+    BuildContext context, {
+    required String previousText,
+  }) {
+    final previous = _PreviousPerformanceCell(text: previousText);
+
+    switch (widget.entry.exerciseType) {
+      case ExerciseType.weightReps:
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _ValueField(
+                controller: _weightCtrl,
+                label: 'ק"ג (יעד ${widget.entry.targetWeightKg ?? '-'})',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+                ],
+                onChanged: _emitWeight,
               ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ValueField(
+                controller: _repsCtrl,
+                label: 'חזרות (יעד ${widget.entry.targetReps ?? '-'})',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                onChanged: _emitReps,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: previous),
           ],
         );
       case ExerciseType.repsOnly:
-        return Column(
+        return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ValueField(
-              controller: _repsCtrl,
-              label: 'חזרות (יעד ${widget.entry.targetReps ?? '-'})',
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: _emitReps,
-            ),
-            if (hint != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                hint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+            Expanded(
+              child: _ValueField(
+                controller: _repsCtrl,
+                label: 'חזרות (יעד ${widget.entry.targetReps ?? '-'})',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: _emitReps,
               ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: previous),
           ],
         );
       case ExerciseType.time:
-        return Column(
+        return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ValueField(
-              controller: _timeCtrl,
-              label: 'שניות (יעד ${widget.entry.targetTimeSec ?? '-'})',
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: _emitTime,
-            ),
-            if (hint != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                hint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+            Expanded(
+              child: _ValueField(
+                controller: _timeCtrl,
+                label: 'שניות (יעד ${widget.entry.targetTimeSec ?? '-'})',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: _emitTime,
               ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: previous),
           ],
         );
     }
+  }
+}
+
+class _ColumnHeaders extends StatelessWidget {
+  const _ColumnHeaders({required this.type});
+
+  final ExerciseType type;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColors.navy.withValues(alpha: 0.7),
+          fontWeight: FontWeight.w600,
+        );
+
+    Widget header(String text) => Expanded(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: style,
+          ),
+        );
+
+    final children = switch (type) {
+      ExerciseType.weightReps => [
+          header('ק"ג'),
+          header('חזרות'),
+          header('האימון האחרון'),
+        ],
+      ExerciseType.repsOnly => [
+          header('חזרות'),
+          header('האימון האחרון'),
+        ],
+      ExerciseType.time => [
+          header('זמן'),
+          header('האימון האחרון'),
+        ],
+    };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(60, 0, 20, 4),
+      child: Row(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviousPerformanceCell extends StatelessWidget {
+  const _PreviousPerformanceCell({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasData = text != '—';
+
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'האימון האחרון',
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+        border: OutlineInputBorder(),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: hasData ? AppColors.ember : theme.colorScheme.onSurfaceVariant,
+          fontWeight: hasData ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+    );
   }
 }
 

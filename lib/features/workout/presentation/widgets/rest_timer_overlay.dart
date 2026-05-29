@@ -30,6 +30,15 @@ class RestTimerOverlay extends ConsumerWidget {
                   'מנוחה',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
+                if (!session.restAlarmEnabled) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'צליל סיום מנוחה כבוי',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Text(
                   _formatTime(remaining),

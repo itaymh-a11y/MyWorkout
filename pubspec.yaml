@@ -1,7 +1,7 @@
 name: myworkout
 description: MyWorkout — מעקב אימונים, תוכניות ותרגילים.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.11.5
@@ -20,6 +20,8 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   fl_chart: ^1.2.0
+  audioplayers: ^6.4.0
+  wakelock_plus: ^1.4.0
 
 dev_dependencies:
   flutter_test:

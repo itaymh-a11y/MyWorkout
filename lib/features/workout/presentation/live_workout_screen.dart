@@ -5,9 +5,27 @@ import 'package:myworkout/core/theme/app_colors.dart';
 import 'package:myworkout/features/workout/application/session_providers.dart';
 import 'package:myworkout/features/workout/presentation/widgets/live_set_row.dart';
 import 'package:myworkout/features/workout/presentation/widgets/rest_timer_overlay.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
-class LiveWorkoutScreen extends ConsumerWidget {
+class LiveWorkoutScreen extends ConsumerStatefulWidget {
   const LiveWorkoutScreen({super.key});
+
+  @override
+  ConsumerState<LiveWorkoutScreen> createState() => _LiveWorkoutScreenState();
+}
+
+class _LiveWorkoutScreenState extends ConsumerState<LiveWorkoutScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WakelockPlus.enable();
+  }
+
+  @override
+  void dispose() {
+    WakelockPlus.disable();
+    super.dispose();
+  }
 
   String _formatElapsed(int sec) {
     final m = sec ~/ 60;
@@ -63,7 +81,7 @@ class LiveWorkoutScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     ref.watch(workoutTickProvider);
     final session = ref.watch(sessionControllerProvider);
 
@@ -76,11 +94,13 @@ class LiveWorkoutScreen extends ConsumerWidget {
     final controller = ref.read(sessionControllerProvider.notifier);
     String? currentExercise;
     final children = <Widget>[];
+    var isFirstSetInExercise = false;
 
     for (var i = 0; i < session.sets.length; i++) {
       final entry = session.sets[i];
       if (entry.exerciseName != currentExercise) {
         currentExercise = entry.exerciseName;
+        isFirstSetInExercise = true;
         children.add(
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
@@ -107,16 +127,20 @@ class LiveWorkoutScreen extends ConsumerWidget {
             ),
           ),
         );
+      } else {
+        isFirstSetInExercise = false;
       }
 
       children.add(
         LiveSetRow(
           key: ValueKey('${entry.exerciseId}_${entry.setIndex}'),
           entry: entry,
+          showColumnHeaders: isFirstSetInExercise,
           onChanged: (updated) => controller.updateSet(i, updated),
           onToggleComplete: () => controller.toggleSetComplete(i),
         ),
       );
+      isFirstSetInExercise = false;
 
       final isLastOfExercise = i == session.sets.length - 1 ||
           session.sets[i + 1].exerciseId != entry.exerciseId;
@@ -180,6 +204,18 @@ class LiveWorkoutScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: session.restAlarmEnabled
+                ? 'השתק צליל סיום מנוחה'
+                : 'הפעל צליל סיום מנוחה',
+            onPressed: () =>
+                ref.read(sessionControllerProvider.notifier).toggleRestAlarm(),
+            icon: Icon(
+              session.restAlarmEnabled
+                  ? Icons.volume_up_rounded
+                  : Icons.volume_off_rounded,
+            ),
+          ),
           TextButton(
             onPressed: () => _confirmCancel(context, ref),
             style: TextButton.styleFrom(foregroundColor: Colors.white),

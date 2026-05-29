@@ -12,6 +12,7 @@ class LiveWorkoutState {
     this.restEndsAt,
     this.restStartedAt,
     this.restDurationSec = 0,
+    this.restAlarmEnabled = true,
   });
 
   final String uid;
@@ -23,6 +24,7 @@ class LiveWorkoutState {
   final DateTime? restEndsAt;
   final DateTime? restStartedAt;
   final int restDurationSec;
+  final bool restAlarmEnabled;
 
   bool get isActive => true;
   bool get isResting =>
@@ -43,6 +45,7 @@ class LiveWorkoutState {
     DateTime? restEndsAt,
     DateTime? restStartedAt,
     int? restDurationSec,
+    bool? restAlarmEnabled,
     bool clearRest = false,
   }) {
     return LiveWorkoutState(
@@ -56,6 +59,7 @@ class LiveWorkoutState {
       restStartedAt:
           clearRest ? null : (restStartedAt ?? this.restStartedAt),
       restDurationSec: restDurationSec ?? this.restDurationSec,
+      restAlarmEnabled: restAlarmEnabled ?? this.restAlarmEnabled,
     );
   }
 
@@ -69,6 +73,7 @@ class LiveWorkoutState {
         'restEndsAt': restEndsAt?.toIso8601String(),
         'restStartedAt': restStartedAt?.toIso8601String(),
         'restDurationSec': restDurationSec,
+        'restAlarmEnabled': restAlarmEnabled,
       };
 
   factory LiveWorkoutState.fromJson(Map<String, dynamic> json) {
@@ -88,6 +93,7 @@ class LiveWorkoutState {
           ? DateTime.parse(json['restStartedAt'] as String)
           : null,
       restDurationSec: json['restDurationSec'] as int? ?? 0,
+      restAlarmEnabled: json['restAlarmEnabled'] as bool? ?? true,
     );
   }
 }
