@@ -3,12 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:myworkout/core/theme/app_brand_extension.dart';
 import 'package:myworkout/core/theme/app_colors.dart';
 import 'package:myworkout/core/utils/session_format.dart';
-import 'package:myworkout/core/widgets/accent_card.dart';
 import 'package:myworkout/features/calendar/application/calendar_providers.dart';
-import 'package:myworkout/features/calendar/presentation/manual_session_screen.dart';
-import 'package:myworkout/features/calendar/presentation/session_detail_screen.dart';
-import 'package:myworkout/features/workout/application/session_delete.dart';
-import 'package:myworkout/shared/models/workout_session.dart';
+import 'package:myworkout/features/tracking/presentation/widgets/day_journal.dart';
 
 class CalendarScreen extends ConsumerWidget {
   const CalendarScreen({super.key});
@@ -31,6 +27,7 @@ class CalendarScreen extends ConsumerWidget {
     final selectedDay = ref.watch(calendarSelectedDayProvider);
     final byDay = ref.watch(sessionsByDayInWeekProvider);
     final daySessions = ref.watch(sessionsOnSelectedDayProvider);
+    final markers = ref.watch(calendarDayMarkersProvider);
     final weekSessionsAsync = ref.watch(sessionsInWeekProvider);
     final theme = Theme.of(context);
     final brand = context.brand;
@@ -79,6 +76,7 @@ class CalendarScreen extends ConsumerWidget {
                 final day = weekStart.add(Duration(days: i));
                 final key = dayKey(day);
                 final count = byDay[key]?.length ?? 0;
+                final hasExtra = markers[key]?.hasExtra ?? false;
                 final isSelected = dayKey(selectedDay) == key;
                 final isToday = dayKey(DateTime.now()) == key;
 
@@ -150,6 +148,18 @@ class CalendarScreen extends ConsumerWidget {
                                 )
                               else
                                 const SizedBox(height: 18),
+                              const SizedBox(height: 4),
+                              if (hasExtra)
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: brand.calendar,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              else
+                                const SizedBox(height: 6),
                             ],
                           ),
                         ),
@@ -162,123 +172,13 @@ class CalendarScreen extends ConsumerWidget {
           ),
         ),
         const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'שבוע לפי א׳–ש׳',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'אימונים ב-${formatSessionDate(selectedDay)}',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+        Expanded(
+          child: DayJournal(
+            day: selectedDay,
+            sessions: daySessions,
           ),
         ),
-        Expanded(
-          child: daySessions.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'אין אימונים ביום זה',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: () {
-                          ManualSessionScreen.open(
-                            context,
-                            initialDate: selectedDay,
-                          );
-                        },
-                        icon: const Icon(Icons.history_edu),
-                        label: const Text('הוסף אימון ידני'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: daySessions.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final session = daySessions[index];
-                    return Dismissible(
-                      key: ValueKey(session.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: 20),
-                        color: Theme.of(context).colorScheme.error,
-                        child: Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.onError,
-                        ),
-                      ),
-                      confirmDismiss: (_) async {
-                        return confirmAndDeleteSession(
-                          context,
-                          ref,
-                          sessionId: session.id,
-                          planName: session.planName,
-                        );
-                      },
-                      child: _SessionListTile(session: session),
-                    );
-                  },
-                ),
-        ),
       ],
-    );
-  }
-}
-
-class _SessionListTile extends StatelessWidget {
-  const _SessionListTile({required this.session});
-
-  final WorkoutSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final brand = context.brand;
-    final time = session.startedAt.toLocal();
-    final timeStr =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-
-    return AccentCard(
-      accent: ContentAccent.workout,
-      padding: EdgeInsets.zero,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: brand.contentSurface(ContentAccent.workout),
-          child: Icon(Icons.fitness_center, color: brand.workout, size: 22),
-        ),
-        title: Text(session.planName),
-        subtitle: Text('$timeStr · ${formatDuration(session.durationSec)}'),
-        trailing: const Icon(Icons.chevron_left),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => SessionDetailScreen(sessionId: session.id),
-            ),
-          );
-        },
-      ),
     );
   }
 }

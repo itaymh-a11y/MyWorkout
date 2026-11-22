@@ -21,11 +21,14 @@ class ExercisePersonalRecords {
     this.maxWeightKg,
     this.maxReps,
     this.maxTimeSec,
+    this.maxEstimatedOneRepMaxKg,
   });
 
   final double? maxWeightKg;
   final int? maxReps;
   final int? maxTimeSec;
+  /// שיא אומדן כוח משולב (משקל + חזרות) — נוסחת Epley.
+  final double? maxEstimatedOneRepMaxKg;
 }
 
 class ExerciseStatsData {
@@ -45,12 +48,29 @@ class SessionChartPoint {
     this.avgWeightKg,
     this.avgReps,
     this.avgTimeSec,
+    this.avgEstimatedOneRepMaxKg,
   });
 
   final DateTime date;
   final double? avgWeightKg;
   final double? avgReps;
   final double? avgTimeSec;
+  /// ממוצע אומדן כוח משולב לסטים באימון (ק"ג).
+  final double? avgEstimatedOneRepMaxKg;
+}
+
+/// אומדן 1RM לפי נוסחת Epley: משקל × (1 + חזרות / 30).
+/// מאפשר להשוות בין אימונים גם כשעלית במשקל והורדת בחזרות (או להפך).
+double? estimatedOneRepMaxKg(double? weightKg, int? reps) {
+  if (weightKg == null || reps == null || reps < 1) return null;
+  if (reps == 1) return weightKg;
+  return weightKg * (1 + reps / 30);
+}
+
+/// נפח סט בודד: משקל × חזרות (טונאז' לסט).
+double? setVolumeKg(double? weightKg, int? reps) {
+  if (weightKg == null || reps == null || reps < 1) return null;
+  return weightKg * reps;
 }
 
 double? _averageDoubles(Iterable<double> values) {
@@ -74,6 +94,13 @@ SessionChartPoint chartPointFromSession(ExerciseSessionHistory h) {
     ),
     avgTimeSec: _averageDoubles(
       source.map((s) => s.actualTimeSec).whereType<int>().map((t) => t.toDouble()),
+    ),
+    avgEstimatedOneRepMaxKg: _averageDoubles(
+      source
+          .map(
+            (s) => estimatedOneRepMaxKg(s.actualWeightKg, s.actualReps),
+          )
+          .whereType<double>(),
     ),
   );
 }
@@ -128,6 +155,7 @@ ExercisePersonalRecords _computeFromAll(
     case ExerciseType.weightReps:
       double? maxW;
       int? maxR;
+      double? maxE1rm;
       for (final s in sets) {
         if (s.actualWeightKg != null) {
           maxW = maxW == null
@@ -139,8 +167,16 @@ ExercisePersonalRecords _computeFromAll(
               ? s.actualReps
               : (s.actualReps! > maxR ? s.actualReps : maxR);
         }
+        final e1rm = estimatedOneRepMaxKg(s.actualWeightKg, s.actualReps);
+        if (e1rm != null) {
+          maxE1rm = maxE1rm == null ? e1rm : math.max(maxE1rm, e1rm);
+        }
       }
-      return ExercisePersonalRecords(maxWeightKg: maxW, maxReps: maxR);
+      return ExercisePersonalRecords(
+        maxWeightKg: maxW,
+        maxReps: maxR,
+        maxEstimatedOneRepMaxKg: maxE1rm,
+      );
     case ExerciseType.repsOnly:
       int? maxR;
       for (final s in sets) {

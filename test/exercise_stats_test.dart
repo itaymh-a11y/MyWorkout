@@ -53,6 +53,16 @@ void main() {
     final point = chartPointFromSession(history);
     expect(point.avgWeightKg, 50);
     expect(point.avgReps, 8);
+    // Epley: 40×(1+10/30)=53.33, 50×(1+8/30)=63.33, 60×(1+6/30)=72 → ממוצע ≈ 62.89
+    expect(point.avgEstimatedOneRepMaxKg, closeTo(62.89, 0.1));
+  });
+
+  test('אומדן כוח משקל+חזרות — דוגמת 15×10 מול 20×8', () {
+    final first = estimatedOneRepMaxKg(15, 10)!;
+    final second = estimatedOneRepMaxKg(20, 8)!;
+    expect(first, closeTo(20, 0.01));
+    expect(second, closeTo(25.33, 0.01));
+    expect(second, greaterThan(first));
   });
 
   test('PR משקל וחזרות', () {
@@ -82,5 +92,6 @@ void main() {
     final pr = computePersonalRecords(sets, ExerciseType.weightReps);
     expect(pr.maxWeightKg, 62.5);
     expect(pr.maxReps, 8);
+    expect(pr.maxEstimatedOneRepMaxKg, closeTo(76, 0.1));
   });
 }

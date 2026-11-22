@@ -89,6 +89,12 @@ class _RecordsCard extends StatelessWidget {
 
     switch (type) {
       case ExerciseType.weightReps:
+        if (records.maxEstimatedOneRepMaxKg != null) {
+          rows.add(_prRow(
+            'שיא כוח משוער',
+            '${records.maxEstimatedOneRepMaxKg!.toStringAsFixed(1)} ק"ג',
+          ));
+        }
         if (records.maxWeightKg != null) {
           rows.add(_prRow('שיא משקל', '${records.maxWeightKg} ק"ג'));
         }

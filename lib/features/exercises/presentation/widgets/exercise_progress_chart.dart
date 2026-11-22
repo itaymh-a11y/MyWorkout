@@ -72,6 +72,41 @@ class ExerciseProgressChart extends StatelessWidget {
                   ),
               },
             ),
+            if (exerciseType == ExerciseType.weightReps) ...[
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'כוח משוער (משקל + חזרות)',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                child: Text(
+                  'נוסחת Epley: משקל × (1 + חזרות ÷ 30) — מאפשר להשוות אימונים גם כשהמשקל והחזרות משתנים בכיוונים שונים.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 180,
+                child: _SingleSeriesChart(
+                  points: points,
+                  color: theme.colorScheme.secondary,
+                  value: (p) => p.avgEstimatedOneRepMaxKg,
+                  yLabel: (v) => '${_formatAvg(v)} ק"ג',
+                  legend: 'אומדן כוח ממוצע לאימון',
+                  tooltipLabel: (p) {
+                    if (p.avgEstimatedOneRepMaxKg == null) return null;
+                    return 'כוח משוער ${_formatAvg(p.avgEstimatedOneRepMaxKg!)} ק"ג';
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             if (exerciseType == ExerciseType.weightReps)
               _LegendRow(
@@ -287,6 +322,7 @@ class _SingleSeriesChart extends StatelessWidget {
     required this.value,
     required this.yLabel,
     required this.legend,
+    this.tooltipLabel,
   });
 
   final List<SessionChartPoint> points;
@@ -294,6 +330,7 @@ class _SingleSeriesChart extends StatelessWidget {
   final double? Function(SessionChartPoint) value;
   final String Function(double) yLabel;
   final String legend;
+  final String? Function(SessionChartPoint point)? tooltipLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -316,6 +353,25 @@ class _SingleSeriesChart extends StatelessWidget {
         maxX: maxX,
         minY: yRange.minY,
         maxY: yRange.maxY,
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (touched) {
+              if (touched.isEmpty) return [];
+              final i = touched.first.x.toInt();
+              if (i < 0 || i >= points.length) return [];
+              final p = points[i];
+              final extra = tooltipLabel?.call(p);
+              final lines = <String>[formatSessionDate(p.date)];
+              if (extra != null) lines.add(extra);
+              return [
+                LineTooltipItem(
+                  lines.join('\n'),
+                  const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ];
+            },
+          ),
+        ),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
